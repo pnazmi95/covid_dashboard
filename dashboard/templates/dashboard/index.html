@@ -1,0 +1,203 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="{% static 'dashboard/css/css_reset.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.css' %}">
+    <link rel="stylesheet" type="text/css" href="https://github.com/downloads/lafeber/world-flags-sprite/flags32.css"/>
+
+    <script src="{% static 'dashboard/js/chart.min.js' %}"></script>
+    <script src="https://code.highcharts.com/maps/highmaps.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/data.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/offline-exporting.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/accessibility.js"></script>
+
+
+    <style>
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            padding: 7px 25px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body style="background-color: #45a4f8">
+<div class="container">
+    <div class="row">
+        <div class="col-md-12"
+             style="background-color: #020509;margin: 40px 0; padding: 40px; border: #000626 3px solid; border-radius: 10px">
+            <nav style="text-align: center">
+                <h1>
+                    <a href="/" style="color: #ffffff; font-size: 4rem"> COVID-19 DashBoard </a>
+                </h1>
+            </nav>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4"
+             style="float: left;  max-height: 650px;max-width:400px;overflow: scroll; overflow-x:hidden;">
+            <div style="background-color: rgb(10,10,10);">
+                <h2 style="color: red; text-align: center; padding: 20px;">
+                    Total Infected: {{ total_infected }}
+                </h2>
+            </div>
+            <div>
+                <canvas id="myChart" style="height: 10000px; width: 100%;background-color: #ffffff"></canvas>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div id="myWorldMap" style="width: 100%; height: 35rem; border: red solid 5px"></div>
+        </div>
+    </div>
+</div>
+
+
+<div>
+
+</div>
+
+
+<script>
+    Chart.defaults.font.size = 16;
+    Chart.defaults.font.weight = 'bold';
+    const ctx = document.getElementById('myChart');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ country_names|safe }},
+            datasets: [{
+                label: 'The In No: ',
+                data: {{ country_values|safe }},
+                backgroundColor: [
+                    'rgb(243,30,47)',
+                ],
+                borderColor: [
+                    'rgb(243,30,47,1)',
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            layout: {
+                padding: 20
+            },
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            indexAxis: 'y',
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'black',
+                        display: false
+                    },
+                    ticks: {
+                        color: 'black',
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'black',
+                        display: false
+                    },
+                    ticks: {
+                        color: 'black',
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+<script>
+    (async () => {
+
+        const topology = await fetch(
+            'https://code.highcharts.com/mapdata/custom/world.topo.json'
+        ).then(response => response.json());
+        const dataNew = {{ data_for_world_map|safe }};
+        Highcharts.getJSON('https://cdn.jsdelivr.net/gh/highcharts/highcharts@v7.0.0/samples/data/world-population-density.json', function (data) {
+
+            // Prevent logarithmic errors in color calulcation
+            data.forEach(function (p) {
+                p.value = (p.value < 1 ? 1 : p.value);
+            });
+
+            // Initialize the chart
+            Highcharts.mapChart('myWorldMap', {
+
+                chart: {
+                    map: topology
+                },
+
+                title: {
+                    text: 'Infected population world map'
+                },
+
+                legend: {
+                    title: {
+                        text: 'Infected population heatmap',
+                        style: {
+                            color: ( // theme
+                                Highcharts.defaultOptions &&
+                                Highcharts.defaultOptions.legend &&
+                                Highcharts.defaultOptions.legend.title &&
+                                Highcharts.defaultOptions.legend.title.style &&
+                                Highcharts.defaultOptions.legend.title.style.color
+                            ) || 'black'
+                        }
+                    }
+                },
+
+                mapNavigation: {
+                    enabled: true,
+                    buttonOptions: {
+                        verticalAlign: 'bottom'
+                    }
+                },
+
+                tooltip: {
+                    backgroundColor: 'none',
+                    borderWidth: 0,
+                    shadow: false,
+                    useHTML: true,
+                    padding: 0,
+                    pointFormat: '<span class="f32"><span class="flag {point.properties.hc-key}">' +
+                        '</span></span> {point.name}<br>' +
+                        '<span style="font-size:30px">{point.value}</span>',
+                    positioner: function () {
+                        return {x: 0, y: 250};
+                    }
+                },
+
+                colorAxis: {
+                    min: 1,
+                    max: 10000000,
+                    type: 'logarithmic'
+                },
+
+                series: [{
+                    data: dataNew,
+                    joinBy: ['iso-a3', 'code3'],
+                    name: 'Infected Population',
+                    states: {
+                        hover: {
+                            color: '#a4edba'
+                        }
+                    }
+                }]
+            });
+        });
+
+    })();
+</script>
+
+</body>
+</html>
